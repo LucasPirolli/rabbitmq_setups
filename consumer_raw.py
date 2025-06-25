@@ -12,8 +12,10 @@ RABBITMQ_USER = os.getenv("RABBITMQ_USER")
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS")
 RABBITMQ_QUEUE = os.getenv("RABBITMQ_QUEUE", "data_queue")
 
+
 def callback(ch, method, properties, body):
     print("Corpo:", body)
+
 
 # Conexão com o RabbitMQ
 connection_parameters = pika.ConnectionParameters(
