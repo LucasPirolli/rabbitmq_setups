@@ -1,4 +1,6 @@
+from typing import Dict
 import pika
+import json
 import os
 from dotenv import load_dotenv
 
@@ -11,18 +13,18 @@ RABBITMQ_PORT = int(os.getenv("RABBITMQ_PORT", "5672"))
 RABBITMQ_USER = os.getenv("RABBITMQ_USER")
 RABBITMQ_PASS = os.getenv("RABBITMQ_PASS")
 RABBITMQ_QUEUE = os.getenv("RABBITMQ_QUEUE", "data_queue")
+RABBIT_EXCHANGE = os.getenv("RABBIT_EXCHANGE", "data_exchange")
 
- 
-class RabbitmqConsumer:
-    def __init__(self, callback):
+
+class RabbitmqPublisher:
+    def __init__(self):
         self.__host = RABBITMQ_HOST
         self.__port = RABBITMQ_PORT
         self.__username = RABBITMQ_USER
         self.__password = RABBITMQ_PASS
-        self.__queue = RABBITMQ_QUEUE
-        self.__callback = callback
+        self.__exchange = RABBIT_EXCHANGE
+        self.__routing_key = ""
         self.__channel = self.__create_channel()
-
 
     def __create_channel(self):
         connection_parameters = pika.ConnectionParameters(
@@ -34,25 +36,19 @@ class RabbitmqConsumer:
             )
         )
 
-        # Cria um canal e declara a fila
         channel = pika.BlockingConnection(connection_parameters).channel()
-        channel.queue_declare(queue=self.__queue, durable=True)
-
-        # Começa a consumir mensagens
-        channel.basic_consume(
-            queue=self.__queue,
-            on_message_callback=self.__callback,
-            auto_ack=True
-        )
-
         return channel
 
-    def start_consuming(self):
-        print(f"Aguardando mensagens em '{self.__queue}'...")
-        self.__channel.start_consuming()
+    def send_message(self, body: Dict):
+        self.__channel.basic_publish(
+            exchange=self.__exchange,
+            routing_key=self.__routing_key,
+            body=json.dumps(body),
+            properties=pika.BasicProperties(
+                delivery_mode=2
+            )
+        )
+    
 
-def callback(ch, method, properties, body):
-    print("Corpo:", body)
-
-rabbitmq_consumer = RabbitmqConsumer(callback)
-rabbitmq_consumer.start_consuming()
+rabbitmq_publisher = RabbitmqPublisher()
+rabbitmq_publisher.send_message({"message": "Mensagem de teste"})
